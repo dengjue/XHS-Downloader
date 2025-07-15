@@ -93,12 +93,14 @@ main() {
     docker tag "$APP_IMAGE:latest" "$APP_IMAGE:$BRANCH_NAME-$TIMESTAMP"
     echo "已标记镜像: $APP_IMAGE:$BRANCH_NAME-$TIMESTAMP"
 
-    # 5. 停止并删除旧容器
+    # 5. 停止并删除旧容器（修复：仅当容器存在时执行）
     echo "==== 更新容器 ===="
-    if docker ps -q -f name="$CONTAINER_NAME" >/dev/null; then
+    if docker ps -aq -f name="$CONTAINER_NAME" >/dev/null; then  # -aq 检查所有状态的容器（包括停止的）
         echo "停止旧容器: $CONTAINER_NAME"
-        docker stop "$CONTAINER_NAME" >/dev/null
-        docker rm "$CONTAINER_NAME" >/dev/null
+        docker stop "$CONTAINER_NAME" >/dev/null 2>&1 || true  # 忽略停止失败（如容器已停止）
+        docker rm "$CONTAINER_NAME" >/dev/null 2>&1 || true    # 忽略删除失败
+    else
+        echo "无旧容器，直接创建新容器"
     fi
 
     # 6. 确保数据卷存在
